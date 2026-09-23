@@ -49,6 +49,8 @@
   .p-venc{background:var(--venc-bg);color:var(--venc)}
   .p-neutro{background:var(--navy-soft);color:var(--navy)}
   .p-cinza{background:#eef0f3;color:#4b5563}
+  /* Situação em duas linhas (quebra após a primeira palavra) */
+  .pill-situacao{white-space:normal;text-align:center;line-height:1.25;border-radius:12px}
 
   .nav-tabs .nav-link{color:var(--muted);font-weight:600;border:none;border-bottom:3px solid transparent}
   .nav-tabs .nav-link.active{color:var(--navy);border-bottom-color:var(--navy);background:none}
@@ -248,7 +250,9 @@ const fmtMoedaInput = v => (Number(v)||0).toLocaleString('pt-BR',{minimumFractio
 function pillStatus(s){ const st=STATUS.find(x=>x.nome===s); return st?`<span class="pill p-${st.css}">${s}</span>`:'<span class="meta">–</span>'; }
 function pillSituacao(s){
   const m={'Ativo':'p-neutro','Em Renovação':'p-warn','Suspenso':'p-cinza','Encerrado':'p-cinza','Aguardando Disputa':'p-warn','Perdemos a Disputa':'p-venc'};
-  return `<span class="pill ${m[s]||'p-cinza'}">${esc(s||'–')}</span>`;
+  // Quebra após a primeira palavra: "Em<br>Renovação", "Aguardando<br>Disputa", "Perdemos<br>a Disputa"
+  const texto=esc(s||'–').replace(' ','<br>');
+  return `<span class="pill pill-situacao ${m[s]||'p-cinza'}">${texto}</span>`;
 }
 
 /* ============ API (JSONP) ============ */
