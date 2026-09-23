@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Contratos e Licitações</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1e2a4a; --navy-2:#2c3e6b; --navy-soft:#e8ecf5;
+    --bg:#f3f5f9; --line:#dde2ec; --text:#1f2937; --muted:#6b7280;
+    --ok:#16a34a; --ok-bg:#dcfce7;
+    --warn:#b45309; --warn-bg:#fef3c7;
+    --urg:#c2410c; --urg-bg:#ffedd5;
+    --venc:#b91c1c; --venc-bg:#fee2e2;
+  }
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+  .topbar{background:var(--navy);color:#fff;padding:.9rem 0}
+  .topbar h1{font-size:1.15rem;font-weight:700;margin:0}
+  .topbar small{color:#b9c3dc}
+  .topbar img{height:36px;background:#fff;border-radius:6px;padding:3px}
+  .btn-navy{background:var(--navy);color:#fff;border:none}
+  .btn-navy:hover{background:var(--navy-2);color:#fff}
+  .card{border:1px solid var(--line);border-radius:12px;box-shadow:none}
+  .kpi .label{color:var(--muted);font-size:.8rem;font-weight:500}
+  .kpi .valor{font-size:1.45rem;font-weight:700;color:var(--navy);line-height:1.2}
+  .kpi.destaque{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .kpi.destaque .label{color:#b9c3dc}
+  .kpi.destaque .valor{color:#fff}
+  .kpi .progress{height:6px;background:rgba(255,255,255,.2)}
+  .kpi .progress-bar{background:#7dd3fc}
+
+  .status-card{cursor:pointer;border-left:5px solid transparent;transition:background .15s}
+  .status-card:hover{background:#fafbfd}
+  .status-card.ativo{outline:2px solid var(--navy)}
+  .status-card .n{font-size:1.6rem;font-weight:700}
+  .status-card .sub{color:var(--muted);font-size:.78rem}
+  .st-ok{border-left-color:var(--ok)} .st-ok .n{color:var(--ok)}
+  .st-warn{border-left-color:#d97706} .st-warn .n{color:var(--warn)}
+  .st-urg{border-left-color:#ea580c} .st-urg .n{color:var(--urg)}
+  .st-venc{border-left-color:#dc2626} .st-venc .n{color:var(--venc)}
+
+  .pill{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.72rem;font-weight:600;white-space:nowrap}
+  .p-ok{background:var(--ok-bg);color:var(--ok)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)}
+  .p-urg{background:var(--urg-bg);color:var(--urg)}
+  .p-venc{background:var(--venc-bg);color:var(--venc)}
+  .p-neutro{background:var(--navy-soft);color:var(--navy)}
+  .p-cinza{background:#eef0f3;color:#4b5563}
+
+  .nav-tabs .nav-link{color:var(--muted);font-weight:600;border:none;border-bottom:3px solid transparent}
+  .nav-tabs .nav-link.active{color:var(--navy);border-bottom-color:var(--navy);background:none}
+  .nav-tabs{border-bottom:1px solid var(--line)}
+
+  .tabela-wrap{overflow-x:auto}
+  table.tb{width:100%;min-width:1050px}
+  table.tb thead th{background:var(--navy-soft);color:var(--navy);font-size:.75rem;font-weight:600;border:none;padding:.65rem .6rem;white-space:nowrap}
+  table.tb td{vertical-align:middle;padding:.6rem;border-color:var(--line)}
+  .orgao{font-weight:600;color:var(--navy)}
+  .meta{color:var(--muted);font-size:.78rem}
+  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .saldo-bar{height:5px;border-radius:3px;background:#e5e7eb;margin-top:4px}
+  .saldo-bar > div{height:100%;border-radius:3px;background:var(--navy-2)}
+  .acoes .btn{padding:.2rem .45rem}
+  .vazio{padding:3rem 1rem;text-align:center;color:var(--muted)}
+
+  .banner-demo{background:var(--warn-bg);color:var(--warn);font-size:.82rem}
+  .form-label{font-size:.8rem;font-weight:600;color:var(--navy);margin-bottom:.2rem}
+  .previa{background:var(--navy-soft);border-radius:10px;padding:.75rem 1rem}
+  .toast-container{z-index:2000}
+  :focus-visible{outline:2px solid var(--navy-2);outline-offset:2px}
+
+  @media print{
+    .no-print,.acoes,.topbar .btn{display:none!important}
+    body{background:#fff;font-size:11px}
+    .card{border:1px solid #ccc}
+    table.tb{min-width:0}
+    .topbar{background:#fff;color:#000;border-bottom:2px solid #000}
+    .topbar small{color:#333}
+    .kpi.destaque{background:#fff;color:#000}
+    .kpi.destaque .valor,.kpi.destaque .label{color:#000}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container-xl d-flex align-items-center gap-3">
+    <img src="logo.png" alt="" onerror="this.remove()">
+    <div class="flex-grow-1">
+      <h1>Controle de Contratos e Licitações</h1>
+      <small id="ultimaAtualizacao">Carregando…</small>
+    </div>
+    <button class="btn btn-sm btn-outline-light" onclick="carregar()" title="Recarregar dados"><i class="bi bi-arrow-clockwise"></i></button>
+    <button class="btn btn-sm btn-outline-light" onclick="window.print()" title="Imprimir"><i class="bi bi-printer"></i></button>
+  </div>
+</header>
+
+<div id="bannerDemo" class="banner-demo py-2 d-none no-print">
+  <div class="container-xl"><i class="bi bi-info-circle me-1"></i>Modo demonstração: configure a <strong>API_URL</strong> no código para gravar na Planilha Google. As alterações feitas aqui não são salvas.</div>
+</div>
+
+<main class="container-xl py-4">
+
+  <!-- Resumo geral -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg-3"><div class="card kpi p-3 h-100"><div class="label">Total contratado</div><div class="valor" id="kTotal">–</div><div class="meta" id="kQtd"></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card kpi p-3 h-100"><div class="label">Total faturado</div><div class="valor" id="kFaturado">–</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card kpi p-3 h-100"><div class="label">Saldo a executar</div><div class="valor" id="kSaldo">–</div></div></div>
+    <div class="col-6 col-lg-3"><div class="card kpi destaque p-3 h-100"><div class="label">Execução global</div><div class="valor" id="kPerc">–</div><div class="progress mt-2"><div class="progress-bar" id="kPercBar" style="width:0%"></div></div></div></div>
+  </div>
+
+  <!-- Resumo por status de vigência (clicável = filtro) -->
+  <div class="row g-3 mb-4" id="statusCards"></div>
+
+  <!-- Abas + filtros -->
+  <div class="card">
+    <div class="px-3 pt-2 d-flex flex-wrap align-items-end justify-content-between gap-2">
+      <ul class="nav nav-tabs">
+        <li class="nav-item"><button class="nav-link active" data-aba="contratos" onclick="trocarAba('contratos')">Contratos ativos <span class="pill p-neutro ms-1" id="cntContratos">0</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-aba="historico" onclick="trocarAba('historico')">Histórico <span class="pill p-cinza ms-1" id="cntHistorico">0</span></button></li>
+      </ul>
+      <button class="btn btn-navy btn-sm mb-2 no-print" onclick="abrirForm()"><i class="bi bi-plus-lg me-1"></i>Novo contrato</button>
+    </div>
+
+    <div class="p-3 border-bottom no-print">
+      <div class="row g-2">
+        <div class="col-12 col-md-5"><input id="fBusca" class="form-control form-control-sm" placeholder="Buscar por órgão, edital, contrato ou pedido"></div>
+        <div class="col-4 col-md-2"><select id="fAno" class="form-select form-select-sm"><option value="">Todos os anos</option></select></div>
+        <div class="col-4 col-md-2"><select id="fSituacao" class="form-select form-select-sm"><option value="">Toda situação</option><option>Ativo</option><option>Em Renovação</option><option>Suspenso</option><option>Encerrado</option></select></div>
+        <div class="col-4 col-md-3"><select id="fStatus" class="form-select form-select-sm"><option value="">Todo status de vigência</option></select></div>
+      </div>
+    </div>
+
+    <div class="tabela-wrap">
+      <table class="table tb mb-0">
+        <thead><tr>
+          <th>Órgão / Cliente</th><th>Pedidos internos</th>
+          <th class="num">Valor total</th><th class="num">Faturado</th><th class="num">Saldo</th>
+          <th>Vigência</th><th class="num">Dias p/ vencer</th><th>Status vigência</th><th>Situação</th>
+          <th class="no-print"></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Modal: cadastro/edição -->
+<div class="modal fade" id="mdForm" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <form class="modal-content" id="formContrato" novalidate>
+      <div class="modal-header"><h5 class="modal-title" id="formTitulo">Novo contrato</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="iId">
+        <div class="row g-3">
+          <div class="col-md-9"><label class="form-label" for="iOrgao">Órgão / Cliente *</label><input id="iOrgao" class="form-control" required></div>
+          <div class="col-md-3"><label class="form-label" for="iAno">Ano</label><input id="iAno" type="number" class="form-control" min="2000" max="2100"></div>
+          <div class="col-md-4"><label class="form-label" for="iEdital">Nº Licitação / Edital</label><input id="iEdital" class="form-control" placeholder="27/2026"></div>
+          <div class="col-md-4"><label class="form-label" for="iContrato">Nº Contrato / ARP</label><input id="iContrato" class="form-control" placeholder="61/2026"></div>
+          <div class="col-md-4"><label class="form-label" for="iSituacao">Situação</label><select id="iSituacao" class="form-select"><option>Ativo</option><option>Em Renovação</option><option>Suspenso</option><option>Encerrado</option></select></div>
+          <div class="col-12"><label class="form-label" for="iPedidos">Pedidos internos</label><input id="iPedidos" class="form-control" placeholder="Separe por ponto e vírgula: 319796; 320796"></div>
+          <div class="col-md-6"><label class="form-label" for="iValorTotal">Valor total (R$)</label><input id="iValorTotal" class="form-control moeda" inputmode="decimal" placeholder="0,00"></div>
+          <div class="col-md-6"><label class="form-label" for="iValorFaturado">Valor faturado (R$)</label><input id="iValorFaturado" class="form-control moeda" inputmode="decimal" placeholder="0,00"></div>
+          <div class="col-md-6"><label class="form-label" for="iInicio">Data início</label><input id="iInicio" type="date" class="form-control"></div>
+          <div class="col-md-6"><label class="form-label" for="iTermino">Data término</label><input id="iTermino" type="date" class="form-control"></div>
+          <div class="col-12"><label class="form-label" for="iLink">Link para arquivos</label><input id="iLink" class="form-control" placeholder="S:\Administrativo\Vendas\… ou https://…"></div>
+          <div class="col-12"><div class="previa d-flex flex-wrap gap-4" id="previa"></div></div>
+          <div class="col-12 d-none" id="avisoEncerrar"><div class="alert alert-warning py-2 mb-0 small"><i class="bi bi-archive me-1"></i>Ao salvar como <strong>Encerrado</strong>, o contrato será movido para o Histórico.</div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-navy" id="btnSalvar">Salvar contrato</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: lançar faturamento -->
+<div class="modal fade" id="mdFaturar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="formFaturar">
+      <div class="modal-header"><h5 class="modal-title">Lançar faturamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="orgao mb-1" id="fatOrgao"></div>
+        <div class="meta mb-3" id="fatInfo"></div>
+        <label class="form-label" for="fatValor">Valor da nota (R$)</label>
+        <input id="fatValor" class="form-control moeda" inputmode="decimal" placeholder="0,00" required>
+        <div class="form-text" id="fatPrevia"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-navy">Somar ao faturado</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="toast" class="toast align-items-center text-bg-dark border-0"><div class="d-flex"><div class="toast-body" id="toastMsg"></div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ============ CONFIGURAÇÃO ============ */
+// Cole aqui a URL /exec do Web App do Apps Script. Vazio = modo demonstração.
+const API_URL = 'https://script.google.com/macros/s/AKfycby3R-Gm6qkSwlrKvQ3aEFhPHRpsxi_G7We6uLL6suLZNL6tEuckfe6_rmjtk5i9kyjMyA/exec';
+
+/* ============ ESTADO ============ */
+let contratos = [], historico = [];
+let abaAtual = 'contratos', filtroStatus = '';
+const DEMO = !API_URL;
+
+const STATUS = [
+  { nome:'OK - EM DIA',        css:'ok',   card:'st-ok',   desc:'mais de 90 dias' },
+  { nome:'ATENÇÃO: VERIFICAR', css:'warn', card:'st-warn', desc:'31 a 90 dias' },
+  { nome:'URGENTE: RENOVAR',   css:'urg',  card:'st-urg',  desc:'até 30 dias' },
+  { nome:'VENCIDO',            css:'venc', card:'st-venc', desc:'prazo encerrado' }
+];
+
+/* ============ CÁLCULOS (mesmas regras da planilha) ============ */
+function hoje(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function parseISO(s){ if(!s) return null; const [a,m,d]=String(s).slice(0,10).split('-').map(Number); return new Date(a,m-1,d); }
+function diasParaVencer(c){ const t=parseISO(c.dataTermino); return t ? Math.round((t-hoje())/86400000) : null; }
+function statusVigencia(c){
+  const d=diasParaVencer(c); if(d===null) return '';
+  if(d<0) return 'VENCIDO'; if(d<=30) return 'URGENTE: RENOVAR'; if(d<=90) return 'ATENÇÃO: VERIFICAR'; return 'OK - EM DIA';
+}
+function saldo(c){ return (Number(c.valorTotal)||0)-(Number(c.valorFaturado)||0); }
+
+/* ============ FORMATAÇÃO ============ */
+const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const dataBR = s => { const d=parseISO(s); return d ? d.toLocaleDateString('pt-BR') : '–'; };
+const esc = s => String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+function parseMoeda(s){
+  s=String(s||'').replace(/[R$\s]/g,''); if(!s) return 0;
+  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');
+  return Number(s)||0;
+}
+const fmtMoedaInput = v => (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+function pillStatus(s){ const st=STATUS.find(x=>x.nome===s); return st?`<span class="pill p-${st.css}">${s}</span>`:'<span class="meta">–</span>'; }
+function pillSituacao(s){
+  const m={'Ativo':'p-neutro','Em Renovação':'p-warn','Suspenso':'p-cinza','Encerrado':'p-cinza'};
+  return `<span class="pill ${m[s]||'p-cinza'}">${esc(s||'–')}</span>`;
+}
+
+/* ============ API (JSONP) ============ */
+function api(params){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1e5);
+    const qs=new URLSearchParams({...params,callback:cb}).toString();
+    const s=document.createElement('script');
+    const timer=setTimeout(()=>{limpar();reject(new Error('Tempo esgotado ao falar com o servidor.'));},20000);
+    function limpar(){clearTimeout(timer);delete window[cb];s.remove();}
+    window[cb]=r=>{limpar(); r&&r.ok?resolve(r):reject(new Error((r&&r.erro)||'Erro desconhecido.'));};
+    s.onerror=()=>{limpar();reject(new Error('Não foi possível conectar à API. Verifique a API_URL.'));};
+    s.src=API_URL+(API_URL.includes('?')?'&':'?')+qs;
+    document.body.appendChild(s);
+  });
+}
+
+/* ============ MODO DEMONSTRAÇÃO ============ */
+const demoDB = {
+  contratos:[{
+    id:'CT-DEMO01', ano:2026, orgao:'Pref. Mun. de Mondaí - SC', edital:'27/2026', contrato:'61/2026',
+    pedidos:'319796; 320796; 321064', valorTotal:241600, valorFaturado:24000,
+    dataInicio:'2026-06-25', dataTermino:'2027-06-25', situacao:'Ativo',
+    link:'S:\\Administrativo\\Vendas\\Licitacoes - Cias de Agua\\Prefeituras\\PM Mondaí - SC\\PE N° 27_2026\\ATA - Mondaí - SC_assinado.pdf'
+  }],
+  historico:[]
+};
+async function demo(p){
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  if(p.action==='listar') return {ok:true,...clone(demoDB)};
+  if(p.action==='salvar'){
+    const d=JSON.parse(p.payload); d.id=d.id||'CT-'+Math.random().toString(16).slice(2,10).toUpperCase();
+    demoDB.contratos=demoDB.contratos.filter(c=>c.id!==d.id);
+    if(d.situacao==='Encerrado'){ demoDB.historico.push({...d,encerradoEm:new Date().toISOString()}); return {ok:true,movidoParaHistorico:true}; }
+    demoDB.contratos.push(d); return {ok:true};
+  }
+  if(p.action==='faturar'){ const c=demoDB.contratos.find(x=>x.id===p.id); c.valorFaturado=(+c.valorFaturado||0)+Number(p.valor); return {ok:true}; }
+  if(p.action==='excluir'){ demoDB[p.origem==='historico'?'historico':'contratos']=demoDB[p.origem==='historico'?'historico':'contratos'].filter(c=>c.id!==p.id); return {ok:true}; }
+  if(p.action==='reativar'){ const c=demoDB.historico.find(x=>x.id===p.id); demoDB.historico=demoDB.historico.filter(x=>x.id!==p.id); c.situacao='Ativo'; delete c.encerradoEm; demoDB.contratos.push(c); return {ok:true}; }
+}
+const chamar = p => DEMO ? demo(p) : api(p);
+
+/* ============ CARREGAR E RENDERIZAR ============ */
+async function carregar(){
+  try{
+    const r=await chamar({action:'listar'});
+    contratos=r.contratos||[]; historico=r.historico||[];
+    document.getElementById('ultimaAtualizacao').textContent='Atualizado em '+new Date().toLocaleString('pt-BR');
+    montarFiltroAno(); renderizar();
+  }catch(e){
+    document.getElementById('ultimaAtualizacao').textContent='Falha ao carregar';
+    avisar(e.message,true);
+  }
+}
+
+function montarFiltroAno(){
+  const sel=document.getElementById('fAno'), atual=sel.value;
+  const anos=[...new Set([...contratos,...historico].map(c=>c.ano).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Todos os anos</option>'+anos.map(a=>`<option>${a}</option>`).join('');
+  sel.value=anos.map(String).includes(atual)?atual:'';
+}
+
+function listaFiltrada(){
+  const base=abaAtual==='contratos'?contratos:historico;
+  const q=document.getElementById('fBusca').value.trim().toLowerCase();
+  const ano=document.getElementById('fAno').value;
+  const sit=document.getElementById('fSituacao').value;
+  const st=document.getElementById('fStatus').value||filtroStatus;
+  return base.filter(c=>{
+    if(ano && String(c.ano)!==ano) return false;
+    if(sit && c.situacao!==sit) return false;
+    if(st && statusVigencia(c)!==st) return false;
+    if(q && ![c.orgao,c.edital,c.contrato,c.pedidos].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>(diasParaVencer(a)??1e9)-(diasParaVencer(b)??1e9));
+}
+
+function renderizar(){
+  // Resumo geral: contratos em andamento, respeitando o filtro de ano
+  const ano=document.getElementById('fAno').value;
+  const base=contratos.filter(c=>!ano||String(c.ano)===ano);
+  const tot=base.reduce((s,c)=>s+(+c.valorTotal||0),0);
+  const fat=base.reduce((s,c)=>s+(+c.valorFaturado||0),0);
+  const perc=tot>0?fat/tot:0;
+  document.getElementById('kTotal').textContent=brl(tot);
+  document.getElementById('kQtd').textContent=`${base.length} contrato${base.length===1?'':'s'}${ano?' em '+ano:''}`;
+  document.getElementById('kFaturado').textContent=brl(fat);
+  document.getElementById('kSaldo').textContent=brl(tot-fat);
+  document.getElementById('kPerc').textContent=(perc*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+  document.getElementById('kPercBar').style.width=Math.min(perc*100,100)+'%';
+
+  // Resumo por status de vigência
+  document.getElementById('statusCards').innerHTML=STATUS.map(st=>{
+    const g=base.filter(c=>statusVigencia(c)===st.nome);
+    const s=g.reduce((a,c)=>a+saldo(c),0);
+    return `<div class="col-6 col-lg-3"><div class="card status-card ${st.card} p-3 h-100 ${filtroStatus===st.nome?'ativo':''}" role="button" tabindex="0"
+      onclick="alternarStatus('${st.nome}')" onkeydown="if(event.key==='Enter')alternarStatus('${st.nome}')">
+      <div class="d-flex justify-content-between align-items-start"><span class="pill p-${st.css}">${st.nome}</span><span class="n">${g.length}</span></div>
+      <div class="sub mt-2">${st.desc} · saldo ${brl(s)}</div></div></div>`;
+  }).join('');
+
+  const fs=document.getElementById('fStatus');
+  if(fs.options.length<=1) fs.innerHTML+=STATUS.map(s=>`<option>${s.nome}</option>`).join('');
+
+  document.getElementById('cntContratos').textContent=contratos.length;
+  document.getElementById('cntHistorico').textContent=historico.length;
+
+  // Tabela
+  const lista=listaFiltrada(), tb=document.getElementById('tbody');
+  if(!lista.length){
+    tb.innerHTML=`<tr><td colspan="10" class="vazio">${
+      (abaAtual==='contratos'&&!contratos.length)?'Nenhum contrato cadastrado. Use <strong>Novo contrato</strong> para começar.':
+      (abaAtual==='historico'&&!historico.length)?'Contratos encerrados aparecem aqui.':'Nenhum contrato corresponde aos filtros.'}</td></tr>`;
+    return;
+  }
+  tb.innerHTML=lista.map(c=>{
+    const d=diasParaVencer(c), sd=saldo(c), vt=+c.valorTotal||0;
+    const pctExec=vt>0?Math.min((+c.valorFaturado||0)/vt*100,100):0;
+    const ped=String(c.pedidos||'').split(/[;,]/).map(x=>x.trim()).filter(Boolean);
+    const hist=abaAtual==='historico';
+    return `<tr>
+      <td><div class="orgao">${esc(c.orgao)}</div>
+        <div class="meta">Edital ${esc(c.edital||'–')} · Contrato/ARP ${esc(c.contrato||'–')}${c.ano?' · '+c.ano:''}</div></td>
+      <td>${ped.length?ped.map(p=>`<span class="pill p-cinza me-1 mb-1">${esc(p)}</span>`).join(''):'<span class="meta">–</span>'}</td>
+      <td class="num">${brl(vt)}</td>
+      <td class="num">${brl(c.valorFaturado)}</td>
+      <td class="num"><strong>${brl(sd)}</strong><div class="saldo-bar" title="${pctExec.toFixed(1)}% executado"><div style="width:${pctExec}%"></div></div></td>
+      <td class="text-nowrap">${dataBR(c.dataInicio)}<div class="meta">até ${dataBR(c.dataTermino)}</div></td>
+      <td class="num">${d===null?'–':d}</td>
+      <td>${pillStatus(statusVigencia(c))}</td>
+      <td>${pillSituacao(c.situacao)}${hist&&c.encerradoEm?`<div class="meta mt-1">em ${new Date(c.encerradoEm).toLocaleDateString('pt-BR')}</div>`:''}</td>
+      <td class="acoes text-end text-nowrap no-print">
+        ${c.link?`<button class="btn btn-sm btn-light" title="${/^https?:/i.test(c.link)?'Abrir arquivos':'Copiar caminho da pasta'}" onclick="abrirLink('${c.id}')"><i class="bi ${/^https?:/i.test(c.link)?'bi-box-arrow-up-right':'bi-folder2-open'}"></i></button>`:''}
+        ${hist
+          ?`<button class="btn btn-sm btn-light" title="Reativar contrato" onclick="reativar('${c.id}')"><i class="bi bi-arrow-counterclockwise"></i></button>`
+          :`<button class="btn btn-sm btn-light" title="Lançar faturamento" onclick="abrirFaturar('${c.id}')"><i class="bi bi-receipt"></i></button>
+            <button class="btn btn-sm btn-light" title="Editar" onclick="abrirForm('${c.id}')"><i class="bi bi-pencil"></i></button>`}
+        <button class="btn btn-sm btn-light text-danger" title="Excluir" onclick="excluir('${c.id}')"><i class="bi bi-trash"></i></button>
+      </td></tr>`;
+  }).join('');
+}
+
+/* ============ INTERAÇÕES ============ */
+function trocarAba(a){
+  abaAtual=a;
+  document.querySelectorAll('.nav-tabs .nav-link').forEach(b=>b.classList.toggle('active',b.dataset.aba===a));
+  renderizar();
+}
+function alternarStatus(s){ filtroStatus=filtroStatus===s?'':s; document.getElementById('fStatus').value=filtroStatus; renderizar(); }
+['fBusca','fAno','fSituacao'].forEach(id=>document.getElementById(id).addEventListener('input',renderizar));
+document.getElementById('fStatus').addEventListener('change',e=>{filtroStatus=e.target.value;renderizar();});
+
+const acharContrato = id => contratos.find(c=>c.id===id)||historico.find(c=>c.id===id);
+
+async function abrirLink(id){
+  const c=acharContrato(id); if(!c) return;
+  if(/^https?:/i.test(c.link)){ window.open(c.link,'_blank'); return; }
+  try{ await navigator.clipboard.writeText(c.link); avisar('Caminho copiado. Cole no Explorador de Arquivos (Win + E).'); }
+  catch{ prompt('Copie o caminho:',c.link); }
+}
+
+/* --- Formulário --- */
+const mdForm=new bootstrap.Modal('#mdForm');
+const campos={id:'iId',ano:'iAno',orgao:'iOrgao',edital:'iEdital',contrato:'iContrato',pedidos:'iPedidos',
+  dataInicio:'iInicio',dataTermino:'iTermino',situacao:'iSituacao',link:'iLink'};
+const $=id=>document.getElementById(id);
+
+function abrirForm(id){
+  const c=id?acharContrato(id):null;
+  $('formContrato').reset(); $('formContrato').classList.remove('was-validated');
+  $('formTitulo').textContent=c?'Editar contrato':'Novo contrato';
+  Object.entries(campos).forEach(([k,el])=>$(el).value=c?(c[k]??''):'');
+  if(!c){ $('iAno').value=new Date().getFullYear(); $('iSituacao').value='Ativo'; }
+  $('iValorTotal').value=c?fmtMoedaInput(c.valorTotal):'';
+  $('iValorFaturado').value=c?fmtMoedaInput(c.valorFaturado):'';
+  atualizarPrevia(); mdForm.show();
+  setTimeout(()=>$('iOrgao').focus(),300);
+}
+
+function lerForm(){
+  const d={}; Object.entries(campos).forEach(([k,el])=>d[k]=$(el).value.trim());
+  d.valorTotal=parseMoeda($('iValorTotal').value);
+  d.valorFaturado=parseMoeda($('iValorFaturado').value);
+  d.ano=Number(d.ano)||(d.dataInicio?Number(d.dataInicio.slice(0,4)):new Date().getFullYear());
+  return d;
+}
+
+function atualizarPrevia(){
+  const d=lerForm(), dias=diasParaVencer(d), st=statusVigencia(d);
+  $('previa').innerHTML=`
+    <div><div class="meta">Saldo contratual</div><strong>${brl(saldo(d))}</strong></div>
+    <div><div class="meta">Dias p/ vencer</div><strong>${dias===null?'–':dias}</strong></div>
+    <div><div class="meta">Status vigência</div>${pillStatus(st)}</div>`;
+  $('avisoEncerrar').classList.toggle('d-none',d.situacao!=='Encerrado');
+}
+$('formContrato').addEventListener('input',atualizarPrevia);
+$('iInicio').addEventListener('change',()=>{ if(!$('iId').value && $('iInicio').value) $('iAno').value=$('iInicio').value.slice(0,4); });
+document.querySelectorAll('.moeda').forEach(el=>el.addEventListener('blur',()=>{ if(el.value.trim()) el.value=fmtMoedaInput(parseMoeda(el.value)); }));
+
+$('formContrato').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!$('iOrgao').value.trim()){ $('formContrato').classList.add('was-validated'); $('iOrgao').focus(); return; }
+  const d=lerForm();
+  if(d.dataInicio&&d.dataTermino&&d.dataTermino<d.dataInicio){ avisar('A data de término é anterior à data de início.',true); return; }
+  if(d.valorFaturado>d.valorTotal && !confirm('O valor faturado é maior que o valor total. Salvar mesmo assim?')) return;
+  const btn=$('btnSalvar'); btn.disabled=true; btn.textContent='Salvando…';
+  try{
+    const r=await chamar({action:'salvar',payload:JSON.stringify(d)});
+    mdForm.hide();
+    avisar(r.movidoParaHistorico?'Contrato encerrado e movido para o Histórico.':'Contrato salvo.');
+    await carregar();
+  }catch(err){ avisar(err.message,true); }
+  finally{ btn.disabled=false; btn.textContent='Salvar contrato'; }
+});
+
+/* --- Faturamento --- */
+const mdFaturar=new bootstrap.Modal('#mdFaturar');
+let idFaturar=null;
+function abrirFaturar(id){
+  const c=acharContrato(id); idFaturar=id;
+  $('fatOrgao').textContent=c.orgao;
+  $('fatInfo').textContent=`Contrato/ARP ${c.contrato||'–'} · faturado ${brl(c.valorFaturado)} de ${brl(c.valorTotal)}`;
+  $('fatValor').value=''; atualizarFatPrevia(); mdFaturar.show();
+  setTimeout(()=>$('fatValor').focus(),300);
+}
+function atualizarFatPrevia(){
+  const c=acharContrato(idFaturar); if(!c) return;
+  const v=parseMoeda($('fatValor').value);
+  $('fatPrevia').textContent=v?`Novo saldo: ${brl(saldo(c)-v)}`:`Saldo atual: ${brl(saldo(c))}`;
+}
+$('fatValor').addEventListener('input',atualizarFatPrevia);
+$('formFaturar').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const v=parseMoeda($('fatValor').value);
+  if(!(v>0)){ avisar('Informe um valor maior que zero.',true); return; }
+  try{ await chamar({action:'faturar',id:idFaturar,valor:v}); mdFaturar.hide(); avisar(`Faturamento de ${brl(v)} lançado.`); await carregar(); }
+  catch(err){ avisar(err.message,true); }
+});
+
+/* --- Excluir / reativar --- */
+async function excluir(id){
+  const c=acharContrato(id);
+  if(!confirm(`Excluir definitivamente o contrato de "${c.orgao}"?\n\nPara apenas arquivar, edite e mude a situação para Encerrado.`)) return;
+  try{ await chamar({action:'excluir',id,origem:abaAtual}); avisar('Contrato excluído.'); await carregar(); }
+  catch(err){ avisar(err.message,true); }
+}
+async function reativar(id){
+  try{ await chamar({action:'reativar',id}); avisar('Contrato reativado.'); await carregar(); }
+  catch(err){ avisar(err.message,true); }
+}
+
+/* --- Toast --- */
+const toast=new bootstrap.Toast('#toast',{delay:3500});
+function avisar(msg,erro=false){
+  const t=$('toast'); t.classList.toggle('text-bg-danger',erro); t.classList.toggle('text-bg-dark',!erro);
+  $('toastMsg').textContent=msg; toast.show();
+}
+
+/* ============ INÍCIO ============ */
+if(DEMO) $('bannerDemo').classList.remove('d-none');
+carregar();
+</script>
+</body>
+</html>
