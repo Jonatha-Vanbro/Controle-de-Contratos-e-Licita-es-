@@ -129,7 +129,7 @@
       <div class="row g-2">
         <div class="col-12 col-md-5"><input id="fBusca" class="form-control form-control-sm" placeholder="Buscar por órgão, edital, contrato ou pedido"></div>
         <div class="col-4 col-md-2"><select id="fAno" class="form-select form-select-sm"><option value="">Todos os anos</option></select></div>
-        <div class="col-4 col-md-2"><select id="fSituacao" class="form-select form-select-sm"><option value="">Toda situação</option><option>Ativo</option><option>Em Renovação</option><option>Suspenso</option><option>Encerrado</option></select></div>
+        <div class="col-4 col-md-2"><select id="fSituacao" class="form-select form-select-sm"><option value="">Toda situação</option><option>Ativo</option><option>Em Renovação</option><option>Suspenso</option><option>Encerrado</option><option>Aguardando Disputa</option><option>Perdemos a Disputa</option></select></div>
         <div class="col-4 col-md-3"><select id="fStatus" class="form-select form-select-sm"><option value="">Todo status de vigência</option></select></div>
       </div>
     </div>
@@ -160,7 +160,7 @@
           <div class="col-md-3"><label class="form-label" for="iAno">Ano</label><input id="iAno" type="number" class="form-control" min="2000" max="2100"></div>
           <div class="col-md-4"><label class="form-label" for="iEdital">Nº Licitação / Edital</label><input id="iEdital" class="form-control" placeholder="27/2026"></div>
           <div class="col-md-4"><label class="form-label" for="iContrato">Nº Contrato / ARP</label><input id="iContrato" class="form-control" placeholder="61/2026"></div>
-          <div class="col-md-4"><label class="form-label" for="iSituacao">Situação</label><select id="iSituacao" class="form-select"><option>Ativo</option><option>Em Renovação</option><option>Suspenso</option><option>Encerrado</option></select></div>
+          <div class="col-md-4"><label class="form-label" for="iSituacao">Situação</label><select id="iSituacao" class="form-select"><option>Ativo</option><option>Em Renovação</option><option>Suspenso</option><option>Encerrado</option><option>Aguardando Disputa</option><option>Perdemos a Disputa</option></select></div>
           <div class="col-12"><label class="form-label" for="iPedidos">Pedidos internos</label><input id="iPedidos" class="form-control" placeholder="Separe por ponto e vírgula: 319796; 320796"></div>
           <div class="col-md-6"><label class="form-label" for="iValorTotal">Valor total (R$)</label><input id="iValorTotal" class="form-control moeda" inputmode="decimal" placeholder="0,00"></div>
           <div class="col-md-6"><label class="form-label" for="iValorFaturado">Valor faturado (R$)</label><input id="iValorFaturado" class="form-control moeda" inputmode="decimal" placeholder="0,00"></div>
@@ -168,7 +168,7 @@
           <div class="col-md-6"><label class="form-label" for="iTermino">Data término</label><input id="iTermino" type="date" class="form-control"></div>
           <div class="col-12"><label class="form-label" for="iLink">Link para arquivos</label><input id="iLink" class="form-control" placeholder="S:\Administrativo\Vendas\… ou https://…"></div>
           <div class="col-12"><div class="previa d-flex flex-wrap gap-4" id="previa"></div></div>
-          <div class="col-12 d-none" id="avisoEncerrar"><div class="alert alert-warning py-2 mb-0 small"><i class="bi bi-archive me-1"></i>Ao salvar como <strong>Encerrado</strong>, o contrato será movido para o Histórico.</div></div>
+          <div class="col-12 d-none" id="avisoEncerrar"><div class="alert alert-warning py-2 mb-0 small"><i class="bi bi-archive me-1"></i>Ao salvar como <strong id="avisoSituacao">Encerrado</strong>, o registro será movido para o Histórico.</div></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -213,6 +213,10 @@ const API_URL = 'https://script.google.com/macros/s/AKfycby3R-Gm6qkSwlrKvQ3aEFhP
 let contratos = [], historico = [];
 let abaAtual = 'contratos', filtroStatus = '';
 const DEMO = !API_URL;
+// Situações que vão para o Histórico ao salvar (igual ao backend)
+const SITUACOES_HISTORICO = ['Encerrado','Perdemos a Disputa'];
+// Situação que fica fora dos totais (ainda não é contrato ganho)
+const SITUACAO_EM_DISPUTA = 'Aguardando Disputa';
 
 const STATUS = [
   { nome:'OK - EM DIA',        css:'ok',   card:'st-ok',   desc:'mais de 90 dias' },
@@ -243,7 +247,7 @@ function parseMoeda(s){
 const fmtMoedaInput = v => (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 function pillStatus(s){ const st=STATUS.find(x=>x.nome===s); return st?`<span class="pill p-${st.css}">${s}</span>`:'<span class="meta">–</span>'; }
 function pillSituacao(s){
-  const m={'Ativo':'p-neutro','Em Renovação':'p-warn','Suspenso':'p-cinza','Encerrado':'p-cinza'};
+  const m={'Ativo':'p-neutro','Em Renovação':'p-warn','Suspenso':'p-cinza','Encerrado':'p-cinza','Aguardando Disputa':'p-warn','Perdemos a Disputa':'p-venc'};
   return `<span class="pill ${m[s]||'p-cinza'}">${esc(s||'–')}</span>`;
 }
 
@@ -278,7 +282,7 @@ async function demo(p){
   if(p.action==='salvar'){
     const d=JSON.parse(p.payload); d.id=d.id||'CT-'+Math.random().toString(16).slice(2,10).toUpperCase();
     demoDB.contratos=demoDB.contratos.filter(c=>c.id!==d.id);
-    if(d.situacao==='Encerrado'){ demoDB.historico.push({...d,encerradoEm:new Date().toISOString()}); return {ok:true,movidoParaHistorico:true}; }
+    if(SITUACOES_HISTORICO.includes(d.situacao)){ demoDB.historico.push({...d,encerradoEm:new Date().toISOString()}); return {ok:true,movidoParaHistorico:true}; }
     demoDB.contratos.push(d); return {ok:true};
   }
   if(p.action==='faturar'){ const c=demoDB.contratos.find(x=>x.id===p.id); c.valorFaturado=(+c.valorFaturado||0)+Number(p.valor); return {ok:true}; }
@@ -326,11 +330,16 @@ function renderizar(){
   // Resumo geral: contratos em andamento, respeitando o filtro de ano
   const ano=document.getElementById('fAno').value;
   const base=contratos.filter(c=>!ano||String(c.ano)===ano);
-  const tot=base.reduce((s,c)=>s+(+c.valorTotal||0),0);
-  const fat=base.reduce((s,c)=>s+(+c.valorFaturado||0),0);
+  // Totais consideram só contratos ganhos: "Aguardando Disputa" fica de fora
+  const ganhos=base.filter(c=>c.situacao!==SITUACAO_EM_DISPUTA);
+  const emDisputa=base.filter(c=>c.situacao===SITUACAO_EM_DISPUTA);
+  const tot=ganhos.reduce((s,c)=>s+(+c.valorTotal||0),0);
+  const fat=ganhos.reduce((s,c)=>s+(+c.valorFaturado||0),0);
   const perc=tot>0?fat/tot:0;
+  const totDisputa=emDisputa.reduce((s,c)=>s+(+c.valorTotal||0),0);
   document.getElementById('kTotal').textContent=brl(tot);
-  document.getElementById('kQtd').textContent=`${base.length} contrato${base.length===1?'':'s'}${ano?' em '+ano:''}`;
+  document.getElementById('kQtd').textContent=`${ganhos.length} contrato${ganhos.length===1?'':'s'}${ano?' em '+ano:''}`
+    +(emDisputa.length?` · ${emDisputa.length} em disputa (${brl(totDisputa)})`:'');
   document.getElementById('kFaturado').textContent=brl(fat);
   document.getElementById('kSaldo').textContent=brl(tot-fat);
   document.getElementById('kPerc').textContent=(perc*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
@@ -357,7 +366,7 @@ function renderizar(){
   if(!lista.length){
     tb.innerHTML=`<tr><td colspan="10" class="vazio">${
       (abaAtual==='contratos'&&!contratos.length)?'Nenhum contrato cadastrado. Use <strong>Novo contrato</strong> para começar.':
-      (abaAtual==='historico'&&!historico.length)?'Contratos encerrados aparecem aqui.':'Nenhum contrato corresponde aos filtros.'}</td></tr>`;
+      (abaAtual==='historico'&&!historico.length)?'Contratos encerrados ou com disputa perdida aparecem aqui.':'Nenhum contrato corresponde aos filtros.'}</td></tr>`;
     return;
   }
   tb.innerHTML=lista.map(c=>{
@@ -438,7 +447,8 @@ function atualizarPrevia(){
     <div><div class="meta">Saldo contratual</div><strong>${brl(saldo(d))}</strong></div>
     <div><div class="meta">Dias p/ vencer</div><strong>${dias===null?'–':dias}</strong></div>
     <div><div class="meta">Status vigência</div>${pillStatus(st)}</div>`;
-  $('avisoEncerrar').classList.toggle('d-none',d.situacao!=='Encerrado');
+  $('avisoEncerrar').classList.toggle('d-none',!SITUACOES_HISTORICO.includes(d.situacao));
+  $('avisoSituacao').textContent=d.situacao;
 }
 $('formContrato').addEventListener('input',atualizarPrevia);
 $('iInicio').addEventListener('change',()=>{ if(!$('iId').value && $('iInicio').value) $('iAno').value=$('iInicio').value.slice(0,4); });
@@ -454,7 +464,7 @@ $('formContrato').addEventListener('submit',async e=>{
   try{
     const r=await chamar({action:'salvar',payload:JSON.stringify(d)});
     mdForm.hide();
-    avisar(r.movidoParaHistorico?'Contrato encerrado e movido para o Histórico.':'Contrato salvo.');
+    avisar(r.movidoParaHistorico?`Salvo como "${d.situacao}" e movido para o Histórico.`:'Contrato salvo.');
     await carregar();
   }catch(err){ avisar(err.message,true); }
   finally{ btn.disabled=false; btn.textContent='Salvar contrato'; }
